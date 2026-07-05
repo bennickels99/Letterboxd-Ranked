@@ -11,13 +11,17 @@ app.get('/movies/:username', async (req, res) => {
     const url  = `https://letterboxd.com/${username}/films/`
     
     try {
-        const response = await axios.get(url);
+        const response = await axios.get(url, {
+            headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        });
         const $ = cheerio.load(response.data);
-        console.log(response.data);
+        console.log('griditem count:', $('li.griditem').length);
 
         const movies = [];
 
-        $('li.poster-container').each((i, el) => {
+        $('li.griditem').each((i, el) => {
             const div = $(el).find('div.react-component');
             const title = div.attr('data-item-full-display-name');
             const slug = div.attr('data-item-slug');
