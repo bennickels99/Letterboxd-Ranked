@@ -1,0 +1,26 @@
+{
+  "name": "letterboxd-ranked",
+  "version": "1.0.0",
+  "description": "A web app that allows the user to rank all of their movies they've logged into Letterboxd, to have a definitive list of every movie they have ever seen ranked against one another.",
+  "main": "node.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bennickels99/Letterboxd-Ranked.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bennickels99/Letterboxd-Ranked/issues"
+  },
+  "homepage": "https://github.com/bennickels99/Letterboxd-Ranked#readme",
+  "dependencies": {
+    "axios": "^1.18.1",
+    "cheerio": "^1.2.0",
+    "express": "^5.2.1"
+  }
+}
