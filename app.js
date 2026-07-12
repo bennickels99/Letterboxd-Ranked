@@ -59,6 +59,10 @@ app.get('/movies/:username', async (req, res) => {
             if($('li.griditem').length == 0){
                 isData = false;
             }
+            
+            let cookies = await jar.getCookies(url);
+            await new Promise (r => setTimeout(r, 5000));
+
         } while(isData) 
         
         res.json(movies);
