@@ -1,39 +1,38 @@
 const express = require('express');
-const axios = require('axios');
 const cheerio = require('cheerio');
 const puppeteer = require( 'puppeteer-extra');
 const StealthPlugin = require( 'puppeteer-extra-plugin-stealth');
 const AdBlockerPlugiin = require( 'puppeteer-extra-plugin-adblocker');
-const {CookieJar} = require('tough-cookie');
-const {wrapper} = require('axios-cookiejar-support');
+const { executablePath } = require('puppeteer-core');
+const fs = require('fs');
 const app = express();
 const PORT = 3000;
 
 // uses puppeteer plugins to hide from bot detection
-puppeteer.use(StealthPlugin);
+puppeteer.use(StealthPlugin());
 puppeteer.use(AdBlockerPlugiin({ blockTrackers: true}));
 
 // get movie data from letterboxd
 app.get('/movies/:username', async (req, res) => {
-    const username = req.params.username;
-    let url  = `https://letterboxd.com/${username}/films/`
-
-    // opening a browser instance to goto webpage to parse data
-    const browser = await puppeteer.launch({headless: "false" });
-    const page = await browser.newPage();
-
-    await page.goto(url);
-    await page.waitForSelector('li.griditem'); // waiting for the data to load
+    let browser;
     
-    const movies = []; // stores the data
-
-    // cookie data - might not need anymore
-    const jar = new CookieJar();
-    const client = wrapper(axios.create({ jar }));
-    
-    let nextPage = true; // flag for the while loop
-
     try {
+        const username = req.params.username;
+        let url  = `https://letterboxd.com/${username}/films/`
+
+        // opening a browser instance to goto webpage to parse data
+        browser = await puppeteer.launch({
+            headless: false, // set to false because fails when set to true, will try to fix later
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled']});
+        const page = await browser.newPage();
+
+        await page.goto(url);
+        await page.waitForSelector('li.griditem'); // waiting for the data to load
+        
+        const movies = []; // stores the data
+        
+        let nextPage = true; // flag for the while loop
+
         while(nextPage){
             // finds the next button to goto the next page
             const nextPageLink = await page.$('.next');
@@ -54,16 +53,22 @@ app.get('/movies/:username', async (req, res) => {
                 const slug = div.attr('data-item-slug');
                 const link = div.attr('data-item-link');
 
-                // both are span classes
-                // 'rating -micro -darker rated-6' class name to get start ranking??
-                // 'like liked-micro has-icon icon-liked icon-16' class name to get heart??
+                const p = $(el).find('p.poster-viewingdata');
+                const ratingString = p.children().first().attr('class');
+                const rating = ratingString.at(-1);
+                let liked;
+                if($(el).find('span.icon').length > 0) {
+                    liked = true;
+                }else{
+                    liked = false;
+                }
+
+                // 0 = 10, 1 = .5, 2 = 1, 3 = 1.5, 4 = 2 ...
 
                 // adds to the array to store data
-                movies.push({ title, slug, link });
+                movies.push({ title, slug, link, rating, liked });
             });
 
-                    
-            let cookies = await jar.getCookies(url);
 
             // exit condition - if no next button change flag and end loop
             if($('.paginate-nextprev.paginate-disabled').find('.next').length > 0){
@@ -82,11 +87,22 @@ app.get('/movies/:username', async (req, res) => {
 
         res.json(movies);
 
-        await browser.close();
+        // storing the data into a json file
+        const moviesString = JSON.stringify(movies, null, 2);
+
+        fs.writeFile('userMovies.json', moviesString, 'utf8', (err) => {
+            if(err) {
+                console.error("An error occurred while writing to the file: ", err);
+                return;
+            }
+            console.log("JSON file has been saved successfully");
+        });
     
     } catch(error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch movies'});
+    } finally{
+        await browser.close();
     }
 });
 
